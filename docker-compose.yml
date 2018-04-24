@@ -1,0 +1,49 @@
+version: '2'
+
+services:
+
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./letsencrypt:/etc/nginx/certs:ro
+      - /usr/share/nginx/html
+    depends_on:
+      - nginx-letsencrypt
+    restart: always
+    networks:
+      - reverse-proxy
+
+  nginx-letsencrypt:
+    build: .
+    container_name: nginx-letsencrypt-dns
+    volumes:
+      - ./domains.conf:/etc/letsencrypt/domains.conf
+      - ./letsencrypt:/etc/letsencrypt/
+    environment:
+      - LETSENCRYPT_USER_MAIL=
+      - LEXICON_PROVIDER=cloudflare
+      - LEXICON_CLOUDFLARE_USERNAME=
+      - LEXICON_CLOUDFLARE_TOKEN=
+    restart: always
+    networks:
+      - reverse-proxy
+
+  nginx-website:
+    image: nginx
+    container_name: nginx-website
+    environment:
+      - VIRTUAL_HOST=
+    volumes:
+      - ./html:/usr/share/nginx/html
+    restart: always
+    networks:
+      - reverse-proxy
+
+networks:
+  reverse-proxy:
+    driver: bridge
